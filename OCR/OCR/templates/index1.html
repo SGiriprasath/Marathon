@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js"></script>
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+            border-radius: 10px;
+        }
+
+        .modal-button {
+            margin: 10px;
+            padding: 10px 20px;
+            color: white;
+            background-color: #e92b2b; /* Red color for the buttons */
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .modal-button:hover {
+            background-color: #d21f1f; /* Darker shade for hover effect */
+        }
+
+        .modal-button:focus {
+            outline: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <!-- <img src="{{ url_for('static', filename='logo.png') }}" class="logo"> -->
+        <div class="navigation">
+            <a href="#" id="delete-button" class="button green-button">Delete</a>
+            <a href="#" id="delete-all-button" class="button green-button">Delete all</a>
+        </div>
+    </div>
+    <div class="container">
+        <div class="search-container">
+            <form method="post" action="/search">
+                <label for="bib-input"></label>
+                <input type="text" name="bib_number" placeholder="Search" id="bib-input" value="{{ input_text or '' }}">
+                <input type="hidden" name="template" value="index1.html">
+                <button type="submit" id="search-button">Search</button>
+            </form>
+            <div class="dropdown">
+                <button id="download-button" class="down">Download</button>
+                <div id="download-options" class="dropdown-content">
+                    <button id="download-single-button" class="down">Single File</button>
+                    <button id="download-zip-button" class="down">Zip File</button>
+                </div>
+            </div>
+        </div>
+        {% if message %}
+        <p>{{ message }}</p>
+        {% endif %}
+        <div class="image-gallery">
+            {% for img in images %}
+            <img src="{{ img }}" alt="Image" class="gallery-image">
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content">
+            <p id="modal-message">Are you sure you want to delete the selected images?</p>
+            <button id="confirm-button" class="modal-button">Yes</button>
+            <button id="cancel-button" class="modal-button">No</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const images = document.querySelectorAll('.gallery-image');
+            const downloadButton = document.getElementById('download-button');
+            const downloadOptions = document.getElementById('download-options');
+            const downloadSingleButton = document.getElementById('download-single-button');
+            const downloadZipButton = document.getElementById('download-zip-button');
+            const deleteButton = document.getElementById('delete-button');
+            const deleteAllButton = document.getElementById('delete-all-button');
+            const modal = document.getElementById('confirmation-modal');
+            const confirmButton = document.getElementById('confirm-button');
+            const cancelButton = document.getElementById('cancel-button');
+            const modalMessage = document.getElementById('modal-message');
+
+            let selectedImages = [];
+            let deleteAll = false;
+
+            images.forEach(image => {
+                image.addEventListener('click', function () {
+                    if (this.classList.contains('highlighted')) {
+                        this.classList.remove('highlighted');
+                        selectedImages = selectedImages.filter(img => img !== this.src);
+                    } else {
+                        this.classList.add('highlighted');
+                        selectedImages.push(this.src);
+                    }
+                });
+            });
+
+            downloadButton.addEventListener('click', function () {
+                if (selectedImages.length === 0) {
+                    alert("Please select images to download.");
+                } else {
+                    downloadOptions.classList.toggle('show');
+                }
+            });
+
+            function downloadFiles(isZip) {
+                const payload = {
+                    urls: selectedImages,
+                    as_zip: isZip
+                };
+
+                fetch('/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => {
+                    if (isZip) {
+                        return response.blob();
+                    } else {
+                        return response.json();
+                    }
+                })
+                .then(data => {
+                    if (isZip) {
+                        const link = document.createElement('a');
+                        link.href = window.URL.createObjectURL(data);
+                        link.download = 'images.zip';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    } else {
+                        data.images.forEach((imageData, index) => {
+                            const link = document.createElement('a');
+                            link.href = `data:image/png;base64,${imageData}`;
+                            link.download = `image_${index + 1}.png`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error downloading image:', error));
+            }
+
+            downloadSingleButton.addEventListener('click', function () {
+                downloadFiles(false);
+                downloadOptions.classList.remove('show');
+            });
+
+            downloadZipButton.addEventListener('click', function () {
+                downloadFiles(true);
+                downloadOptions.classList.remove('show');
+            });
+
+            deleteButton.addEventListener('click', function () {
+                if (selectedImages.length === 0) {
+                    alert("Please select images to delete.");
+                } else {
+                    deleteAll = false;
+                    modalMessage.textContent = "Are you sure you want to delete the selected images?";
+                    modal.style.display = "block";
+                }
+            });
+
+            deleteAllButton.addEventListener('click', function () {
+                deleteAll = true;
+                modalMessage.textContent = "Are you sure you want to delete all images?";
+                modal.style.display = "block";
+            });
+
+            confirmButton.addEventListener('click', function () {
+                if (deleteAll) {
+                    fetch('/delete_all', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.message === 'All images deleted successfully') {
+                            images.forEach(image => image.parentNode.removeChild(image));
+                        } else {
+                            alert(`Error: ${data.message}`);
+                        }
+                    })
+                    .catch(error => console.error('Error deleting all images:', error));
+                } else {
+                    fetch('/delete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ urls: selectedImages })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.message === 'Images deleted successfully') {
+                            selectedImages.forEach(src => {
+                                const img = document.querySelector(`img[src="${src}"]`);
+                                if (img) {
+                                    img.parentNode.removeChild(img);
+                                }
+                            });
+                            selectedImages = [];
+                        } else {
+                            alert(`Error: ${data.message}`);
+                        }
+                    })
+                    .catch(error => console.error('Error deleting images:', error));
+                }
+                modal.style.display = "none";
+            });
+
+            cancelButton.addEventListener('click', function () {
+                modal.style.display = "none";
+            });
+
+            window.onclick = function (event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+                if (!event.target.matches('#download-button')) {
+                    const dropdowns = document.getElementsByClassName("dropdown-content");
+                    for (let i = 0; i < dropdowns.length; i++) {
+                        const openDropdown = dropdowns[i];
+                        if (openDropdown.classList.contains('show')) {
+                            openDropdown.classList.remove('show');
+                        }
+                    }
+                }
+            };
+        });
+    </script>
+</body>
+
+</html>

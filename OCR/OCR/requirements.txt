@@ -1,0 +1,15 @@
+Python version - 3.11.9
+
+commands to install python library
+pip install library_name
+
+Libraries name :
+paddleocr~=2.7.3
+paddlepaddle
+flask~=3.0.3
+pillow~=10.3.0
+boto3~=1.34.82
+werkzeug~=3.0.3
+opencv-python~=4.6.0.66
+numpy~=1.26.4
+requests~=2.32.3
