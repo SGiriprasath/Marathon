@@ -4,46 +4,208 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OCR</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js"></script>
+    <title>OCR - Gallery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #ec4899;
+            --background: #f8fafc;
+            --text: #1e293b;
+            --text-light: #64748b;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #818cf8 0%, #6366f1 50%, #4f46e5 100%);
+            color: var(--text);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            margin: 40px auto;
+            background: rgba(255,255,255,0.92);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.05);
+            padding: 40px 32px 32px 32px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.2);
+            position: relative;
+        }
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+            pointer-events: none;
+        }
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 28px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .search-container {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+        .search-container form {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .search-container input[type="text"] {
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            font-size: 1rem;
+            background: #f3f4f6;
+            color: var(--text);
+            outline: none;
+            transition: border 0.2s;
+        }
+        .search-container input[type="text"]:focus {
+            border: 1.5px solid var(--primary);
+        }
+        .search-container button[type="submit"] {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: box-shadow 0.2s, transform 0.2s;
+            box-shadow: 0 2px 8px rgba(99,102,241,0.10);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .search-container button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99,102,241,0.18);
+        }
+        .dropdown {
+            position: relative;
+        }
+        .down {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: box-shadow 0.2s, transform 0.2s;
+            box-shadow: 0 2px 8px rgba(99,102,241,0.10);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .down:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99,102,241,0.18);
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background: #fff;
+            min-width: 160px;
+            box-shadow: 0 8px 24px rgba(99,102,241,0.10);
+            border-radius: 12px;
+            z-index: 1;
+            right: 0;
+            top: 110%;
+            overflow: hidden;
+        }
+        .dropdown-content button {
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            background: none;
+            color: var(--text);
+            font-size: 1rem;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .dropdown-content button:hover {
+            background: #f3f4f6;
+        }
+        .dropdown .show {
+            display: block;
+        }
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 32px;
+            margin-top: 32px;
+            padding: 16px;
+        }
+        .gallery-image {
+            width: 100%;
+            height: 280px;
+            object-fit: contain;
+            border-radius: 18px;
+            box-shadow: 0 4px 16px rgba(99,102,241,0.10);
+            background: #fff;
+            border: 2px solid #f3f4f6;
+            padding: 8px;
+            transition: box-shadow 0.3s, border 0.3s, transform 0.2s;
+            display: block;
+        }
+        .gallery-image:hover {
+            box-shadow: 0 8px 32px rgba(99,102,241,0.18);
+            border: 2px solid var(--primary);
+            transform: translateY(-4px) scale(1.02);
+        }
+        .gallery-image.highlighted {
+            border: 2.5px solid var(--primary);
+            box-shadow: 0 8px 32px rgba(99,102,241,0.18);
+            transform: scale(1.03);
+        }
+        .message {
+            margin-top: 18px;
+            font-size: 1rem;
+            color: var(--text-light);
+            font-weight: 500;
+            text-align: center;
+        }
+    </style>
 </head>
 
 <body>
-<!--<div class="header">-->
-    <!-- <img src="{{ url_for('static', filename='logo.png') }}" class="logo">&nbsp -->
-<!--    <div class="navigation">-->
-<!--        <a href="/upload" class="button green-button">-->
-<!--            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-upload" viewBox="0 0 16 16">-->
-<!--                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>-->
-<!--                <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"/>-->
-<!--            </svg>  &nbsp; Go to upload page-->
-<!--        </a>-->
-<!--        <a href="" class="button green-button"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">-->
-<!--  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>-->
-<!--  <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>-->
-<!--</svg> Bin</a>-->
-<!--    </div>-->
-<!--</div>-->
-
 <div class="container">
+    <h1><i class="fas fa-images"></i> OCR Image Gallery</h1>
     <div class="search-container">
          <form method="post" action="/search">
-                <label for="bib-input"></label>
                 <input type="text" name="bib_number" placeholder="Search" id="bib-input" value="{{ input_text or '' }}">
                  <input type="hidden" name="template" value="index.html">
-                <button type="submit" id="search-button">Search</button>
+                <button type="submit" id="search-button"><i class="fas fa-search"></i> Search</button>
             </form>
         <div class="dropdown">
-            <button id="download-button" class="down">Download</button>
+            <button id="download-button" class="down"><i class="fas fa-download"></i> Download</button>
             <div id="download-options" class="dropdown-content">
-                <button id="download-single-button" class="down">Single File</button>
-                <button id="download-zip-button" class="down">Zip File</button>
+                <button id="download-single-button" class="down"><i class="fas fa-file-image"></i> Single File</button>
+                <button id="download-zip-button" class="down"><i class="fas fa-file-archive"></i> Zip File</button>
             </div>
         </div>
     </div>
     {% if message %}
-    <p>{{ message }}</p>
+    <p class="message">{{ message }}</p>
     {% endif %}
     <div class="image-gallery">
         {% for img in images %}
@@ -51,7 +213,7 @@
         {% endfor %}
     </div>
 </div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const images = document.querySelectorAll('.gallery-image');

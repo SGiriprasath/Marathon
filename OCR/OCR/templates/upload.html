@@ -4,111 +4,305 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OCR</title>
+    <title>OCR - Image Upload</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --background: #f8fafc;
+            --text: #1e293b;
+            --text-light: #64748b;
+        }
+
         body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #6b73ff, #000dff);
-            color: #fff;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #818cf8 0%, #6366f1 50%, #4f46e5 100%);
+            color: var(--text);
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
         }
 
         .upload-container {
-            width: 500px;
-            padding: 30px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 680px;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 24px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.1),
+                0 1px 2px rgba(0, 0, 0, 0.05);
             text-align: center;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+            pointer-events: none;
         }
 
         .upload-container h2 {
-            font-size: 28px;
-            margin-bottom: 20px;
-            color: #ffcc00;
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
         }
 
         .upload-box {
-            border: 2px dashed #fff;
-            padding: 30px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.2);
+            border: 2px dashed rgba(99, 102, 241, 0.3);
+            padding: 48px 24px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.8);
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 24px;
+            position: relative;
         }
 
         .upload-box:hover {
-            background: rgba(255, 255, 255, 0.3);
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+            transform: translateY(-2px) scale(1.01);
+        }
+
+        .upload-box::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            padding: 2px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .upload-box:hover::before {
+            opacity: 1;
         }
 
         .upload-box input {
             display: none;
         }
 
+        .upload-icon {
+            font-size: 64px;
+            color: var(--primary);
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .upload-box:hover .upload-icon {
+            transform: scale(1.1);
+        }
+
         .upload-box p {
-            font-size: 16px;
-            margin-top: 10px;
+            font-size: 18px;
+            color: var(--text);
+            margin-top: 12px;
+            font-weight: 500;
+        }
+
+        .upload-box .format-text {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-top: 8px;
         }
 
         .progress-container {
-            margin-top: 20px;
+            margin: 32px 0;
         }
 
         .progress {
             width: 100%;
-            background-color: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
+            height: 8px;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 4px;
             overflow: hidden;
+            margin: 16px 0;
         }
 
         .progress-bar {
-            height: 20px;
-            background-color: #ffcc00;
-            width: 50%;
-            transition: width 0.4s;
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #ec4899);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            animation: shimmer 2s infinite linear;
         }
 
         .buttons {
-            margin-top: 30px;
+            margin-top: 32px;
         }
 
         .buttons button {
-            padding: 12px 25px;
+            padding: 14px 36px;
             color: #fff;
-            background-color: #ff4d4d;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             border: none;
-            border-radius: 5px;
+            border-radius: 16px;
             cursor: pointer;
             font-size: 16px;
-            transition: background 0.3s;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 
+                0 4px 12px rgba(99, 102, 241, 0.2),
+                0 0 0 2px rgba(255, 255, 255, 0.1) inset;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .buttons button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            transition: 0.5s;
+        }
+
+        .buttons button:hover::before {
+            left: 100%;
         }
 
         .buttons button:hover {
-            background-color: #ff1a1a;
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 20px rgba(99, 102, 241, 0.3),
+                0 0 0 2px rgba(255, 255, 255, 0.2) inset;
+        }
+
+        .buttons button:disabled {
+            background: #e2e8f0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         .message {
-            margin-top: 10px;
-            font-size: 14px;
+            margin-top: 16px;
+            font-size: 15px;
+            color: var(--text-light);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .success-message {
+            color: #10b981;
+        }
+
+        .error-message {
+            color: #ef4444;
         }
 
         .training-progress-container {
-            margin-top: 20px;
+            margin-top: 24px;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .uploading .upload-box {
+            animation: pulse 2s infinite;
+        }
+
+        .loading {
+            background: linear-gradient(90deg, #6366f1, #ec4899);
+            background-size: 200% 100%;
+            animation: gradient 2s ease infinite;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
     </style>
 
     <script>
+        // Update status message display
+        function updateStatus(elementId, message, type = '') {
+            const element = document.getElementById(elementId);
+            element.innerText = message;
+            element.className = 'message ' + type;
+            
+            // Add icon based on message type
+            if (type === 'success-message') {
+                element.innerHTML = '<i class="fas fa-check-circle"></i> ' + message;
+            } else if (type === 'error-message') {
+                element.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + message;
+            } else {
+                element.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + message;
+            }
+        }
+
         function handleFiles(files) {
             const progressContainer = document.querySelector('.progress-container');
-            const statusMessage = document.getElementById('upload-status');
             const trainButton = document.querySelector('.train');
             progressContainer.innerHTML = '';
-            statusMessage.innerText = 'Images are uploading...';
+            updateStatus('upload-status', 'Images are uploading...');
 
             const progressBar = document.createElement('div');
             progressBar.className = 'progress';
@@ -118,6 +312,8 @@
 
             progressBar.appendChild(progressFill);
             progressContainer.appendChild(progressBar);
+
+            document.querySelector('.upload-box').classList.add('uploading');
 
             const totalFiles = files.length;
             let totalLoaded = 0;
@@ -136,7 +332,7 @@
                 xhr.open('POST', '/upload');
                 xhr.upload.onprogress = (event) => {
                     totalLoaded += event.loaded;
-                    const percent = Math.round((totalLoaded / totalSize) * 50); // Initial loading to 50%
+                    const percent = Math.round((totalLoaded / totalSize) * 50);
                     progressFill.style.width = percent + '%';
                 };
                 xhr.onload = () => {
@@ -144,13 +340,15 @@
                         filesUploaded++;
                         if (filesUploaded === totalFiles) {
                             setTimeout(() => {
-                                progressFill.style.width = '100%'; // Complete to 100% after a delay
-                                statusMessage.innerText = 'Images are uploaded successfully!';
+                                progressFill.style.width = '100%';
+                                updateStatus('upload-status', 'Images uploaded successfully!', 'success-message');
                                 trainButton.disabled = false;
+                                document.querySelector('.upload-box').classList.remove('uploading');
                             }, 500);
                         }
                     } else {
-                        statusMessage.innerText = 'Error uploading images.';
+                        updateStatus('upload-status', 'Error uploading images.', 'error-message');
+                        document.querySelector('.upload-box').classList.remove('uploading');
                     }
                 };
                 xhr.send(formData);
@@ -159,25 +357,24 @@
 
         function startTraining() {
             const trainingProgressContainer = document.querySelector('.training-progress-container');
-            const trainingStatusMessage = document.getElementById('training-status');
             trainingProgressContainer.innerHTML = '';
-            trainingStatusMessage.innerText = 'Training in progress...';
+            updateStatus('training-status', 'Training in progress...');
 
             const progressBar = document.createElement('div');
             progressBar.className = 'progress';
 
             const progressFill = document.createElement('div');
-            progressFill.className = 'progress-bar';
+            progressFill.className = 'progress-bar loading';
 
             progressBar.appendChild(progressFill);
             trainingProgressContainer.appendChild(progressBar);
 
-            let progress = 50; // Initial progress at 50%
+            let progress = 50;
             progressFill.style.width = '50%';
 
             const interval = setInterval(() => {
                 progress += 2;
-                if (progress >= 100) {
+                if (progress >= 80) {
                     clearInterval(interval);
                 }
                 progressFill.style.width = progress + '%';
@@ -190,16 +387,17 @@
                     clearInterval(interval);
                     progressFill.style.width = '100%';
                     if (data.status === 'completed') {
-                        trainingStatusMessage.innerText = 'Training completed!';
+                        updateStatus('training-status', 'Training completed successfully!', 'success-message');
                     } else {
-                        trainingStatusMessage.innerText = 'Error during training.';
+                        updateStatus('training-status', 'Error during training.', 'error-message');
                     }
                 }).catch(error => {
                     clearInterval(interval);
-                    trainingStatusMessage.innerText = 'Error during training.';
+                    updateStatus('training-status', 'Error during training.', 'error-message');
                 });
         }
 
+        // Initialize drag and drop
         document.addEventListener('DOMContentLoaded', () => {
             const uploadBox = document.querySelector('.upload-box');
             const fileInput = uploadBox.querySelector('input');
@@ -213,21 +411,45 @@
             fileInput.addEventListener('change', () => {
                 handleFiles(fileInput.files);
             });
+
+            // Add drag and drop support
+            uploadBox.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadBox.style.borderColor = 'var(--primary)';
+                uploadBox.style.background = 'rgba(99, 102, 241, 0.05)';
+            });
+
+            uploadBox.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadBox.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                uploadBox.style.background = 'rgba(255, 255, 255, 0.8)';
+            });
+
+            uploadBox.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadBox.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                uploadBox.style.background = 'rgba(255, 255, 255, 0.8)';
+                handleFiles(e.dataTransfer.files);
+            });
         });
     </script>
 </head>
 
 <body>
     <div class="upload-container">
-        <h2>Upload Your Images</h2>
+        <h2>Image Upload & OCR</h2>
         <div class="upload-box">
-            <input type="file" name="files" multiple>
-            <p>Click here or drag & drop files</p>
+            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+            <input type="file" name="files" multiple accept="image/png,image/jpeg,image/jpg">
+            <p>Drop your images here or click to browse</p>
+            <p class="format-text">Supported formats: PNG, JPG, JPEG</p>
         </div>
         <div class="progress-container"></div>
         <p id="upload-status" class="message"></p>
         <div class="buttons">
-            <button type="button" class="train" onclick="startTraining()">Start Training</button>
+            <button type="button" class="train" onclick="startTraining()" disabled>
+                <i class="fas fa-brain"></i> Start Training
+            </button>
         </div>
         <div class="training-progress-container"></div>
         <p id="training-status" class="message"></p>

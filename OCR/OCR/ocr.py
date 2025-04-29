@@ -1,26 +1,26 @@
-import os
-import sqlite3
-import boto3
-import cv2
-import numpy as np
-from PIL import Image
-from paddleocr import PaddleOCR
-from botocore.exceptions import NoCredentialsError, PartialCredentialsError
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from flask import Flask, request, render_template, jsonify, send_file
-from werkzeug.utils import secure_filename
-import base64
-import requests
-import zipfile
-from io import BytesIO
-import logging
+import os #Provides a way of using operating system-dependent functionality like reading environment variables.
+import sqlite3 #Enables interaction with SQLite databases.
+import boto3 #AWS SDK for Python to interact with AWS services like S3.
+import cv2 #Used for image processing tasks.
+import numpy as np #Supports large, multi-dimensional arrays and matrices.
+from PIL import Image #For opening, manipulating, and saving many different image file formats.
+from paddleocr import PaddleOCR #An OCR tool based on PaddlePaddle, used for text detection and recognition.
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError #Handles exceptions related to AWS credentials.
+from concurrent.futures import ThreadPoolExecutor, as_completed #To process images in parallel (multi-threading).
+from flask import Flask, request, render_template, jsonify, send_file #Web framework.
+from werkzeug.utils import secure_filename #To safely store uploaded filenames.
+import base64 #Encodes binary data to ASCII characters.
+import requests #Allows sending HTTP requests.
+import zipfile #For creating and extracting ZIP archives.
+from io import BytesIO #Handles binary streams in memory.
+import logging #Provides a flexible framework for emitting log messages.
 
 app = Flask(__name__)
 
 # Configure AWS credentials
 os.environ['AWS_ACCESS_KEY_ID'] = ''
 os.environ['AWS_SECRET_ACCESS_KEY'] = ''
-os.environ['AWS_REGION'] = ''
+os.environ['AWS_REGION'] = 'eu-north-1'
 aws_access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
 aws_secret_access_key = os.getenv('AWS_SECRET_ACCESS_KEY')
 region_name = os.getenv('AWS_REGION')
@@ -28,6 +28,8 @@ aws_bucket = 'photofilterocr'
 table_name_1 = aws_bucket.replace("-","") + "_table_1"
 table_name_2 = aws_bucket.replace("-","") + "_table_2"
 
+#Initializing AWS S3 Client
+#Creates an S3 client using the provided AWS credentials and region.
 s3 = boto3.client(
     's3',
     aws_access_key_id=aws_access_key_id,
@@ -38,7 +40,11 @@ s3 = boto3.client(
 # Initialize PaddleOCR
 ocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, max_batch_size=200)
 
-
+# Function: already_exist_data:
+# Connects to the SQLite database.
+# Checks if a specific table exists using the table_exists function.
+# If the table exists, retrieves all image names and appends them to a list.
+# Returns the list of existing image names.
 def already_exist_data():
     conn = sqlite3.connect('my_database.db')
     c = conn.cursor()
@@ -61,13 +67,15 @@ def already_exist_data():
 
     return already_exist
 
-
+#Function: table_exists:
+#Checks if a table with the given name exists in the SQLite database.
 def table_exists(conn, table_name):
     query = f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}';"
     cursor = conn.execute(query)
     return cursor.fetchone() is not None
 
-
+# Function: remove_consecutive_duplicates:
+# Removes consecutive duplicate entries from a list.
 def remove_consecutive_duplicates(nums):
     result = []
     prev_num = None
@@ -77,7 +85,9 @@ def remove_consecutive_duplicates(nums):
         prev_num = num
     return result
 
-
+#Function: approximate_match:
+# Performs an approximate match by checking if the input_text is a substring of any entries in data_list.
+# Returns a list of matches without consecutive duplicates.
 def approximate_match(input_text, data_list):
     approximate_match_list = []
     for data, data2 in data_list:
@@ -85,7 +95,10 @@ def approximate_match(input_text, data_list):
             approximate_match_list.append(data)
     return remove_consecutive_duplicates(approximate_match_list)
 
-
+#Function: crop_and_zoom:
+# Resizes the image to 8000x8000 pixels.
+# Calculates a zoom ratio and crops the image around the specified (x, y) coordinates.
+# Resizes the cropped image back to the original dimensions.
 def crop_and_zoom(img, x, y, zoom_factor):
     img1 = img.resize((8000, 8000), Image.LANCZOS)
     width, height = img1.size
@@ -94,29 +107,29 @@ def crop_and_zoom(img, x, y, zoom_factor):
         (x - width / zoom_ratio, y - height / zoom_ratio, x + width / zoom_ratio, y + height / zoom_ratio))
     return cropped_img.resize((width, height), Image.LANCZOS)
 
-
+# Function to integrate preprocessing steps
 def integrate_functions(img_pil, x, y, zoom_factor):
-    cropped_zoomed_img_pil = crop_and_zoom(img_pil, x, y, zoom_factor)
-    cropped_zoomed_img_cv = cv2.cvtColor(np.array(cropped_zoomed_img_pil), cv2.COLOR_RGB2BGR)
+    cropped_zoomed_img_pil = crop_and_zoom(img_pil, x, y, zoom_factor)# Crop and zoom image
+    cropped_zoomed_img_cv = cv2.cvtColor(np.array(cropped_zoomed_img_pil), cv2.COLOR_RGB2BGR)# Convert image to OpenCV format (BGR)
     return cropped_zoomed_img_cv
 
-
+# Fetch image from AWS S3
 def fetch_image_from_s3(bucket_name, object_key):
-    response = s3.get_object(Bucket=bucket_name, Key=object_key)
-    image_data = response['Body'].read()
-    img_pil = Image.open(BytesIO(image_data))
+    response = s3.get_object(Bucket=bucket_name, Key=object_key)# Get object from S3
+    image_data = response['Body'].read() # Read image data
+    img_pil = Image.open(BytesIO(image_data))# Open image using PIL
     return img_pil
 
-
+# List all image keys from an S3 bucket
 def list_images_from_s3(bucket_name):
-    objects = s3.list_objects_v2(Bucket=bucket_name)
-    return [obj['Key'] for obj in objects.get('Contents', [])]
+    objects = s3.list_objects_v2(Bucket=bucket_name)# List objects in the bucket
+    return [obj['Key'] for obj in objects.get('Contents', [])]# Return list of keys
 
-
+# OCR pipeline for all images from S3
 def ocr_with_preprocessing_from_s3(bucket_name, x, y, zoom_factor):
     image_dict = {}
 
-    already_exist_data_value = already_exist_data()
+    already_exist_data_value = already_exist_data()# Get already processed image names
     image_keys = list_images_from_s3(bucket_name)  # Get all image keys from the bucket
 
     def process_image(object_key):
@@ -147,7 +160,7 @@ def ocr_with_preprocessing_from_s3(bucket_name, x, y, zoom_factor):
 
     return image_dict
 
-
+# Store extracted data in SQLite database
 def initialize_database_with_text(image_text_dict):
     conn = sqlite3.connect('my_database.db')
     c = conn.cursor()
@@ -169,7 +182,7 @@ def initialize_database_with_text(image_text_dict):
     conn.commit()
     conn.close()
 
-
+# Train model by triggering OCR and DB storage
 def train_model():
     bucket_name = aws_bucket
     x, y, zoom_factor = 4000, 5000, 1  # Example values for cropping and zooming
@@ -177,7 +190,7 @@ def train_model():
     image_text_dict = ocr_with_preprocessing_from_s3(bucket_name, x, y, zoom_factor)
     initialize_database_with_text(image_text_dict)
 
-
+# Generate URL for S3 object
 def create_presigned_url(bucket_name, object_key, expiration=10000):
     try:
         response = s3.generate_presigned_url('get_object',
@@ -189,7 +202,7 @@ def create_presigned_url(bucket_name, object_key, expiration=10000):
         return None
     return response
 
-
+# Search for images by extracted text
 def search_images_by_text(input_text):
     image_list = []
     conn = sqlite3.connect("my_database.db")
@@ -206,7 +219,7 @@ def search_images_by_text(input_text):
     conn.close()
     return image_list + list(approximate_match_data)
 
-
+# Flask endpoints
 @app.route('/')
 def home():
     return render_template('index.html', message="Enter a BIB Number to find your image")
